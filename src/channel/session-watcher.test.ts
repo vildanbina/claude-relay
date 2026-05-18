@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { claudeSessionName } from "../identity";
 import { startSessionWatcher } from "./session-watcher";
 
 const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -247,6 +248,31 @@ describe("startSessionWatcher", () => {
         await wait(300);
 
         expect(maxActive).toBe(1);
+    });
+
+    test("CLAUDE_RELAY_PRESET_NAME env does not block /rename propagation via watcher", async () => {
+        const prior = process.env.CLAUDE_RELAY_PRESET_NAME;
+        process.env.CLAUDE_RELAY_PRESET_NAME = "preset-name";
+        try {
+            const received: string[] = [];
+            const w = startSessionWatcher({
+                sessionPath,
+                initialName: "preset-name",
+                onName: async (n) => {
+                    received.push(n);
+                },
+                readName: (p) => claudeSessionName({ path: p }),
+            });
+            closers.push(() => w.close());
+
+            fs.writeFileSync(sessionPath, JSON.stringify({ name: "renamed-via-cmd" }));
+            await wait(FLUSH_MS);
+
+            expect(received.at(-1)).toBe("renamed-via-cmd");
+        } finally {
+            if (prior === undefined) delete process.env.CLAUDE_RELAY_PRESET_NAME;
+            else process.env.CLAUDE_RELAY_PRESET_NAME = prior;
+        }
     });
 
     test("ignores events for files other than sessionPath basename", async () => {

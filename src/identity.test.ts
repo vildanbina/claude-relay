@@ -2,7 +2,25 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { claudeSessionName, claudeSessionPath, defaultName, sanitizeSessionName } from "./identity";
+import {
+    claudeSessionName,
+    claudeSessionPath,
+    defaultName,
+    presetSessionName,
+    sanitizeSessionName,
+} from "./identity";
+
+const withEnv = (value: string | undefined, fn: () => void): void => {
+    const prior = process.env.CLAUDE_RELAY_PRESET_NAME;
+    if (value === undefined) delete process.env.CLAUDE_RELAY_PRESET_NAME;
+    else process.env.CLAUDE_RELAY_PRESET_NAME = value;
+    try {
+        fn();
+    } finally {
+        if (prior === undefined) delete process.env.CLAUDE_RELAY_PRESET_NAME;
+        else process.env.CLAUDE_RELAY_PRESET_NAME = prior;
+    }
+};
 
 describe("defaultName", () => {
     test("extracts lowercase basename from typical path", () => {
@@ -139,6 +157,52 @@ describe("claudeSessionName", () => {
         const okPath = path.join(tmpDir, "ok.json");
         fs.writeFileSync(okPath, JSON.stringify({ name: "test.relay_2-new" }));
         expect(claudeSessionName({ path: okPath })).toBe("test.relay_2-new");
+    });
+
+    test("CLAUDE_RELAY_PRESET_NAME does NOT override session file reads (watcher stays authoritative)", () => {
+        const sessionPath = path.join(tmpDir, "preset.json");
+        fs.writeFileSync(sessionPath, JSON.stringify({ name: "from-file" }));
+        withEnv("home-office-abc123", () => {
+            expect(claudeSessionName({ path: sessionPath })).toBe("from-file");
+        });
+    });
+});
+
+describe("presetSessionName", () => {
+    test("returns sanitized name when env is valid", () => {
+        withEnv("home-office-abc123", () => {
+            expect(presetSessionName()).toBe("home-office-abc123");
+        });
+    });
+
+    test("returns null when env is unset", () => {
+        withEnv(undefined, () => {
+            expect(presetSessionName()).toBeNull();
+        });
+    });
+
+    test("returns null when env is empty string", () => {
+        withEnv("", () => {
+            expect(presetSessionName()).toBeNull();
+        });
+    });
+
+    test("returns null when env value contains whitespace", () => {
+        withEnv("has spaces", () => {
+            expect(presetSessionName()).toBeNull();
+        });
+    });
+
+    test("returns null when env value exceeds length cap", () => {
+        withEnv("a".repeat(65), () => {
+            expect(presetSessionName()).toBeNull();
+        });
+    });
+
+    test("trims surrounding whitespace", () => {
+        withEnv("  ok-name  ", () => {
+            expect(presetSessionName()).toBe("ok-name");
+        });
     });
 });
 
