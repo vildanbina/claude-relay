@@ -37,17 +37,17 @@ export function sanitizeSessionName(raw: string): string | null {
     return /^[A-Za-z0-9._-]+$/.test(trimmed) ? trimmed : null;
 }
 
+// CLAUDE_RELAY_PRESET_NAME lets a parent process pre-set the peer name before
+// the Claude session spawns. Used only as the initial registration candidate;
+// the session-file watcher stays authoritative so /rename and /relay-rename
+// still work for preset sessions.
+export function presetSessionName(): string | null {
+    const raw = process.env.CLAUDE_RELAY_PRESET_NAME;
+    if (!raw) return null;
+    return sanitizeSessionName(raw);
+}
+
 export function claudeSessionName(opts: ClaudeSessionNameOptions = {}): string | null {
-    // CLAUDE_RELAY_PRESET_NAME lets the parent process pre-set the peer name
-    // for a Claude session before it spawns. Useful for orchestrators that
-    // spawn many CC sessions and need each to register under a deterministic,
-    // human-meaningful name (e.g. "home-office-<sessionId>") instead of the
-    // directory-basename fallback.
-    const presetName = process.env.CLAUDE_RELAY_PRESET_NAME;
-    if (presetName) {
-        const sanitized = sanitizeSessionName(presetName);
-        if (sanitized) return sanitized;
-    }
     const sessionPath = opts.path ?? claudeSessionPath({ ppid: opts.ppid, home: opts.home });
     try {
         const stat = fs.statSync(sessionPath);

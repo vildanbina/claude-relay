@@ -1,7 +1,7 @@
 import type { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { execFileSync } from "node:child_process";
-import { claudeSessionName, claudeSessionPath, defaultName } from "../identity";
+import { claudeSessionName, claudeSessionPath, defaultName, presetSessionName } from "../identity";
 import { makeLogger } from "../logger";
 import { HUB_SOCKET_PATH, type ServerMsg } from "../protocol";
 import { bootstrapHub, type HubRole } from "./bootstrap";
@@ -91,7 +91,7 @@ export async function startChannel(opts: StartChannelOptions = {}): Promise<Chan
 
     const gitBranch = detectGitBranch();
     const onDiskName = claudeSessionName();
-    const candidate = onDiskName ?? defaultName(process.cwd());
+    const candidate = presetSessionName() ?? onDiskName ?? defaultName(process.cwd());
     let name = opts.skipRegister
         ? candidate
         : await registerWithRetries(

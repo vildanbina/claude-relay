@@ -62,6 +62,16 @@ Claude routes to these automatically. You rarely call them by name.
 
 If two sessions share a slugged basename (both `~/Code/backend/api`), Relay suffixes `-2`, `-3`. Use `relay_peers` to disambiguate by `cwd`.
 
+### Preset name via env (for orchestrators)
+
+Set `CLAUDE_RELAY_PRESET_NAME` in the spawned session's environment to pre-register under a deterministic name:
+
+```bash
+CLAUDE_RELAY_PRESET_NAME=home-office-agent-12 claude ...
+```
+
+Useful when a parent process pty-spawns many sessions and needs each to land under a known name instead of the directory-basename fallback. Same validation as `/relay-rename` applies (max 64 chars, `[A-Za-z0-9._-]+`); invalid values are ignored. The preset only seeds the initial registration — `/rename` and `/relay-rename` continue to work normally.
+
 ## Error codes
 
 | Code                 | Meaning                                               |

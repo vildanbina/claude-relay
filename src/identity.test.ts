@@ -2,7 +2,25 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { claudeSessionName, claudeSessionPath, defaultName, sanitizeSessionName } from "./identity";
+import {
+    claudeSessionName,
+    claudeSessionPath,
+    defaultName,
+    presetSessionName,
+    sanitizeSessionName,
+} from "./identity";
+
+const withEnv = (value: string | undefined, fn: () => void): void => {
+    const prior = process.env.CLAUDE_RELAY_PRESET_NAME;
+    if (value === undefined) delete process.env.CLAUDE_RELAY_PRESET_NAME;
+    else process.env.CLAUDE_RELAY_PRESET_NAME = value;
+    try {
+        fn();
+    } finally {
+        if (prior === undefined) delete process.env.CLAUDE_RELAY_PRESET_NAME;
+        else process.env.CLAUDE_RELAY_PRESET_NAME = prior;
+    }
+};
 
 describe("defaultName", () => {
     test("extracts lowercase basename from typical path", () => {
@@ -141,42 +159,50 @@ describe("claudeSessionName", () => {
         expect(claudeSessionName({ path: okPath })).toBe("test.relay_2-new");
     });
 
-    test("CLAUDE_RELAY_PRESET_NAME env wins over session file", () => {
+    test("CLAUDE_RELAY_PRESET_NAME does NOT override session file reads (watcher stays authoritative)", () => {
         const sessionPath = path.join(tmpDir, "preset.json");
         fs.writeFileSync(sessionPath, JSON.stringify({ name: "from-file" }));
-        const prior = process.env.CLAUDE_RELAY_PRESET_NAME;
-        process.env.CLAUDE_RELAY_PRESET_NAME = "home-office-abc123";
-        try {
-            expect(claudeSessionName({ path: sessionPath })).toBe("home-office-abc123");
-        } finally {
-            if (prior === undefined) delete process.env.CLAUDE_RELAY_PRESET_NAME;
-            else process.env.CLAUDE_RELAY_PRESET_NAME = prior;
-        }
+        withEnv("home-office-abc123", () => {
+            expect(claudeSessionName({ path: sessionPath })).toBe("from-file");
+        });
+    });
+});
+
+describe("presetSessionName", () => {
+    test("returns sanitized name when env is valid", () => {
+        withEnv("home-office-abc123", () => {
+            expect(presetSessionName()).toBe("home-office-abc123");
+        });
     });
 
-    test("invalid CLAUDE_RELAY_PRESET_NAME falls through to session file", () => {
-        const sessionPath = path.join(tmpDir, "preset-fallthrough.json");
-        fs.writeFileSync(sessionPath, JSON.stringify({ name: "from-file" }));
-        const prior = process.env.CLAUDE_RELAY_PRESET_NAME;
-        process.env.CLAUDE_RELAY_PRESET_NAME = "has spaces"; // sanitize rejects
-        try {
-            expect(claudeSessionName({ path: sessionPath })).toBe("from-file");
-        } finally {
-            if (prior === undefined) delete process.env.CLAUDE_RELAY_PRESET_NAME;
-            else process.env.CLAUDE_RELAY_PRESET_NAME = prior;
-        }
+    test("returns null when env is unset", () => {
+        withEnv(undefined, () => {
+            expect(presetSessionName()).toBeNull();
+        });
     });
 
-    test("absent CLAUDE_RELAY_PRESET_NAME preserves legacy behavior", () => {
-        const sessionPath = path.join(tmpDir, "legacy.json");
-        fs.writeFileSync(sessionPath, JSON.stringify({ name: "from-file" }));
-        const prior = process.env.CLAUDE_RELAY_PRESET_NAME;
-        delete process.env.CLAUDE_RELAY_PRESET_NAME;
-        try {
-            expect(claudeSessionName({ path: sessionPath })).toBe("from-file");
-        } finally {
-            if (prior !== undefined) process.env.CLAUDE_RELAY_PRESET_NAME = prior;
-        }
+    test("returns null when env is empty string", () => {
+        withEnv("", () => {
+            expect(presetSessionName()).toBeNull();
+        });
+    });
+
+    test("returns null when env value contains whitespace", () => {
+        withEnv("has spaces", () => {
+            expect(presetSessionName()).toBeNull();
+        });
+    });
+
+    test("returns null when env value exceeds length cap", () => {
+        withEnv("a".repeat(65), () => {
+            expect(presetSessionName()).toBeNull();
+        });
+    });
+
+    test("trims surrounding whitespace", () => {
+        withEnv("  ok-name  ", () => {
+            expect(presetSessionName()).toBe("ok-name");
+        });
     });
 });
 
