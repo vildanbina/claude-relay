@@ -140,6 +140,44 @@ describe("claudeSessionName", () => {
         fs.writeFileSync(okPath, JSON.stringify({ name: "test.relay_2-new" }));
         expect(claudeSessionName({ path: okPath })).toBe("test.relay_2-new");
     });
+
+    test("CLAUDE_RELAY_PRESET_NAME env wins over session file", () => {
+        const sessionPath = path.join(tmpDir, "preset.json");
+        fs.writeFileSync(sessionPath, JSON.stringify({ name: "from-file" }));
+        const prior = process.env.CLAUDE_RELAY_PRESET_NAME;
+        process.env.CLAUDE_RELAY_PRESET_NAME = "home-office-abc123";
+        try {
+            expect(claudeSessionName({ path: sessionPath })).toBe("home-office-abc123");
+        } finally {
+            if (prior === undefined) delete process.env.CLAUDE_RELAY_PRESET_NAME;
+            else process.env.CLAUDE_RELAY_PRESET_NAME = prior;
+        }
+    });
+
+    test("invalid CLAUDE_RELAY_PRESET_NAME falls through to session file", () => {
+        const sessionPath = path.join(tmpDir, "preset-fallthrough.json");
+        fs.writeFileSync(sessionPath, JSON.stringify({ name: "from-file" }));
+        const prior = process.env.CLAUDE_RELAY_PRESET_NAME;
+        process.env.CLAUDE_RELAY_PRESET_NAME = "has spaces"; // sanitize rejects
+        try {
+            expect(claudeSessionName({ path: sessionPath })).toBe("from-file");
+        } finally {
+            if (prior === undefined) delete process.env.CLAUDE_RELAY_PRESET_NAME;
+            else process.env.CLAUDE_RELAY_PRESET_NAME = prior;
+        }
+    });
+
+    test("absent CLAUDE_RELAY_PRESET_NAME preserves legacy behavior", () => {
+        const sessionPath = path.join(tmpDir, "legacy.json");
+        fs.writeFileSync(sessionPath, JSON.stringify({ name: "from-file" }));
+        const prior = process.env.CLAUDE_RELAY_PRESET_NAME;
+        delete process.env.CLAUDE_RELAY_PRESET_NAME;
+        try {
+            expect(claudeSessionName({ path: sessionPath })).toBe("from-file");
+        } finally {
+            if (prior !== undefined) process.env.CLAUDE_RELAY_PRESET_NAME = prior;
+        }
+    });
 });
 
 describe("sanitizeSessionName", () => {
