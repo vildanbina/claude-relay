@@ -18,6 +18,9 @@ jobs:
 
             - run: bun install --frozen-lockfile
 
+            - name: Check plugin versions
+              run: bun run check:plugin-version
+
             - name: Typecheck
               run: bun run typecheck
 
