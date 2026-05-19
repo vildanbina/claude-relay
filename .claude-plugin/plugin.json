@@ -1,6 +1,6 @@
 {
     "name": "relay",
-    "version": "0.1.0",
+    "version": "0.1.4",
     "description": "Let local Claude Code sessions talk to each other in natural language.",
     "author": {
         "name": "Innestic",

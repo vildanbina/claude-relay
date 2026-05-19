@@ -1,11 +1,12 @@
 {
     "name": "claude-relay",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "type": "module",
     "module": "src/channel.ts",
     "scripts": {
         "test": "bun test",
         "start": "bun src/main.ts",
+        "check:plugin-version": "bun run scripts/check-plugin-version.ts",
         "typecheck": "bunx tsc --noEmit",
         "lint": "eslint src",
         "lint:fix": "eslint src --fix",
