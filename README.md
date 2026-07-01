@@ -15,7 +15,7 @@ Claude Relay ships as a Claude Code plugin. Three steps.
 From any Claude Code session:
 
 ```
-/plugin marketplace add innestic/claude-relay
+/plugin marketplace add vildanbina/claude-relay
 ```
 
 ### 2. Install the plugin
@@ -124,7 +124,7 @@ Details: [docs/architecture.md](docs/architecture.md).
 Requires [Bun](https://bun.sh) and Claude Code 2.1.80+.
 
 ```bash
-git clone https://github.com/innestic/claude-relay
+git clone https://github.com/vildanbina/claude-relay
 cd claude-relay && bun install
 bun run check   # typecheck + lint + format + test
 ```

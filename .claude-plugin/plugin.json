@@ -3,11 +3,11 @@
     "version": "0.1.4",
     "description": "Let local Claude Code sessions talk to each other in natural language.",
     "author": {
-        "name": "Innestic",
-        "url": "https://github.com/innestic"
+        "name": "vildanbina",
+        "url": "https://github.com/vildanbina"
     },
-    "homepage": "https://github.com/innestic/claude-relay",
-    "repository": "https://github.com/innestic/claude-relay",
+    "homepage": "https://github.com/vildanbina/claude-relay",
+    "repository": "https://github.com/vildanbina/claude-relay",
     "license": "MIT",
     "keywords": ["mcp", "claude-code", "multi-agent", "messaging"],
     "mcpServers": {
